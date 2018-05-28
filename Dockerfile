@@ -50,7 +50,6 @@ RUN install_pkg.sh \
 
 # tools
 RUN install_pkg.sh \
-    wget \
     curl \
     jq
 

@@ -5,16 +5,16 @@ set -e
 usage() {
     cat <<EOU
 Trigger build on Jenkins (requires a user with API token)
-The script requires wget, curl and jq.
+The script requires curl and jq.
 Usage:
-  -b, --base-url 	 Jenkins base URL
-  -j, --job-path 	 path to the job (with build or buildWithParameters included)
-  -u, --user		 username to trigger the job
-  -t, --token		 API token for the user
-  -p, --params		 build parameters. buildWithParameters must be used for the trigger (optional)
-  -v, --verbose		 print URLs
-  -w, --wait		 wait for build to finish
-  -h, --help		 this help
+  -b, --base-url         Jenkins base URL
+  -j, --job-path         path to the job (with build or buildWithParameters included)
+  -u, --user             username to trigger the job
+  -t, --token            API token for the user
+  -p, --params           build parameters. buildWithParameters must be used for the trigger (optional)
+  -v, --verbose          print URLs
+  -w, --wait             wait for build to finish
+  -h, --help             this help
 EOU
 }
 
@@ -30,17 +30,17 @@ while true ; do
     case "$1" in
         -b|--base-url)
             JENKINS_URL=$2 ; shift 2 ;;
-	-j|--job-path)
-	    JOB_PATH=$2 ; shift 2 ;;
-	-u|--user)
-	    USERNAME=$2 ; shift 2 ;;
-	-t|--token)
-	    TOKEN=$2 ; shift 2 ;;
-	-p|--params)
+        -j|--job-path)
+            JOB_PATH=$2 ; shift 2 ;;
+        -u|--user)
+            USERNAME=$2 ; shift 2 ;;
+        -t|--token)
+            TOKEN=$2 ; shift 2 ;;
+        -p|--params)
             PARAMS=$2 ; shift 2 ;;
         -v|--verbose) VERBOSE=1 ; shift ;;
-	-w|--wait) WAIT=1 ; shift ;;
-	-h|--help) HELP=1 ; shift ;;
+        -w|--wait) WAIT=1 ; shift ;;
+        -h|--help) HELP=1 ; shift ;;
         --) shift ; break ;;
         *) usage ; exit 1 ;;
     esac
@@ -63,13 +63,16 @@ then
     exit 1
 fi
 
-CRUMB=$(wget \
-            --quiet \
-	    --auth-no-challenge \
-	    --user "$USERNAME" \
-	    --password "$TOKEN" \
-	    --output-document - \
-	    "$JENKINS_URL/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
+CRUMB=$(curl \
+            -u "$USERNAME:$TOKEN" \
+            "$JENKINS_URL/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)"
+     )
+
+HEADER=""
+if [[ $CRUMB =~ ^\.crumb:.+ ]]
+then
+    HEADER="--header \"$CRUMB\""
+fi
 
 TRIGGER_URL=$JENKINS_URL/$JOB_PATH
 if [ "$PARAMS" != "" ]
@@ -87,7 +90,7 @@ QUEUE_URL=$(curl \
                 --dump-header - \
                 --output /dev/null \
                 --request POST \
-                --header "$CRUMB" \
+                $HEADER \
                 "$TRIGGER_URL" \
                 --user "$USERNAME:$TOKEN" \
                 | \
@@ -122,7 +125,7 @@ do
     BUILD_URL=$(curl \
                     --silent \
                     --request POST \
-                    --header "$CRUMB" \
+                    $HEADER \
                     --user "$USERNAME:$TOKEN" \
                     "$QUEUE_URL/api/json" \
                     | \
@@ -142,7 +145,7 @@ do
     BUILD_RESULT=$(curl \
                        --silent \
                        --request POST \
-                       --header "$CRUMB" \
+                       $HEADER \
                        --user "$USERNAME:$TOKEN" \
                        "$BUILD_URL/api/json" \
                        | jq -r '.result'
