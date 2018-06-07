@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -64,12 +64,13 @@ then
 fi
 
 CRUMB=$(curl \
+            --silent \
             -u "$USERNAME:$TOKEN" \
             "$JENKINS_URL/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)"
      )
 
 HEADER=""
-if [[ $CRUMB =~ ^\.crumb:.+ ]]
+if [[ ${CRUMB} =~ ^\.crumb:.+ ]]
 then
     HEADER="--header \"$CRUMB\""
 fi
