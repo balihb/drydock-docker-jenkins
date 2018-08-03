@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+. $(dirname $(readlink -f $0))/error_handling.sh
 
 usage() {
     cat <<EOU

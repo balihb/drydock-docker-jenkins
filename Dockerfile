@@ -57,7 +57,7 @@ RUN install_pkg.sh \
 EXPOSE 22
 
 ADD run /usr/local/bin/run
-
+ADD error_handling.sh /usr/local/bin/error_handling.sh
 ADD trigger_build.sh /usr/local/bin/trigger_build.sh
 
 # Default command
