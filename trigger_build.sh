@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# shellcheck source=error_handling.sh
-. $(dirname $(readlink -f $0))/error_handling.sh
+set -e
 
 usage() {
     cat <<EOU
@@ -95,10 +94,8 @@ QUEUE_URL=$(curl \
                 "${HEADER[@]}" \
                 "$TRIGGER_URL" \
                 --user "$USERNAME:$TOKEN" \
-                | \
-                grep -oP '^[Ll]ocation: \K.+$' \
-                | \
-                tr -d '[:space:]'
+                | grep -oP '^[Ll]ocation: \K.+$' \
+                | tr -d '[:space:]'
          )
 
 if [ $WAIT -ne 1 ]
@@ -120,6 +117,7 @@ then
     echo "Queue URL: $QUEUE_URL"
 fi
 
+BUILD_URL=""
 until [ -n "$BUILD_URL" ]
 do
     sleep 1
@@ -129,8 +127,7 @@ do
                     "${HEADER[@]}" \
                     --user "$USERNAME:$TOKEN" \
                     "$QUEUE_URL/api/json" \
-                    | \
-                    jq -r '.executable.url'
+                    | jq -r '.executable.url'
              )
 done
 
@@ -139,6 +136,7 @@ then
     echo "Build URL: $BUILD_URL"
 fi
 
+BUILD_RESULT=""
 until [ -n "$BUILD_RESULT" ]
 do
     sleep 10
@@ -148,7 +146,8 @@ do
                        "${HEADER[@]}" \
                        --user "$USERNAME:$TOKEN" \
                        "$BUILD_URL/api/json" \
-                       | jq -r '.result'
+                       | jq -r '.result' \
+                       | sed -e 's/^null$//'
                 )
 done
 
