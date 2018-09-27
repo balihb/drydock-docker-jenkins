@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 # install_pkg
 ADD install_pkg.sh /usr/local/bin
@@ -6,14 +6,6 @@ RUN chmod a+x /usr/local/bin/install_pkg.sh
 
 # apt-utils
 RUN install_pkg.sh apt-utils
-
-# upgrade
-RUN apt-get -q update &&\
-    DEBIAN_FRONTEND="noninteractive" apt-get -q upgrade -y -o Dpkg::Options::="--force-confnew" --no-install-recommends &&\
-    apt-get -q autoremove &&\
-    apt-get -q clean -y &&\
-    rm -rf /var/lib/apt/lists/* &&\
-    rm -f /var/cache/apt/*.bin
 
 # ssh
 RUN install_pkg.sh \

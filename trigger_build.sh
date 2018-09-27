@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck source=error_handling.sh
 . $(dirname $(readlink -f $0))/error_handling.sh
 
 usage() {
@@ -22,7 +23,7 @@ VERBOSE=0
 WAIT=0
 HELP=0
 
-TEMP=`getopt -o b:j:u:t:p:vwh --long base-url:,job-path:,user:,token:,params:,verbose,wait,help -n 'trigger_build.sh' -- "$@"`
+TEMP=$(getopt -o b:j:u:t:p:vwh --long base-url:,job-path:,user:,token:,params:,verbose,wait,help -n 'trigger_build.sh' -- "$@")
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -52,10 +53,10 @@ then
     exit 0
 fi
 
-if [ "$JENKINS_URL" = "" ] || \
-       [ "$JOB_PATH" = "" ] || \
-       [ "$USERNAME" = "" ] || \
-       [ "$TOKEN" = "" ]
+if [ -z "$JENKINS_URL" ] || \
+       [ -z "$JOB_PATH" ] || \
+       [ -z "$USERNAME" ] || \
+       [ -z "$TOKEN" ]
 then
     echo "Parameter missing"
     echo
@@ -69,16 +70,16 @@ CRUMB=$(curl \
             "$JENKINS_URL/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)"
      )
 
-HEADER=""
-if [[ ${CRUMB} =~ ^\.crumb:.+ ]]
+HEADER=()
+if [[ ${CRUMB} =~ ^(\.crumb|Jenkins-Crumb):.+ ]]
 then
-    HEADER="--header \"$CRUMB\""
+    HEADER=(--header "$CRUMB")
 fi
 
-TRIGGER_URL=$JENKINS_URL/$JOB_PATH
-if [ "$PARAMS" != "" ]
+TRIGGER_URL="$JENKINS_URL/$JOB_PATH"
+if [ -n "$PARAMS" ]
 then
-    TRIGGER_URL=$TRIGGER_URL?$PARAMS
+    TRIGGER_URL="${TRIGGER_URL}?${PARAMS}"
 fi
 
 if [ $VERBOSE -eq 1 ]
@@ -91,11 +92,11 @@ QUEUE_URL=$(curl \
                 --dump-header - \
                 --output /dev/null \
                 --request POST \
-                $HEADER \
+                "${HEADER[@]}" \
                 "$TRIGGER_URL" \
                 --user "$USERNAME:$TOKEN" \
                 | \
-                grep -oP '^Location: \K.+$' \
+                grep -oP '^[Ll]ocation: \K.+$' \
                 | \
                 tr -d '[:space:]'
          )
@@ -105,7 +106,7 @@ then
     exit 0
 fi
 
-if [ "$QUEUE_URL" = "" ]
+if [ -z "$QUEUE_URL" ]
 then
     if [ $VERBOSE -eq 1 ]
     then
@@ -119,14 +120,13 @@ then
     echo "Queue URL: $QUEUE_URL"
 fi
 
-BUILD_URL=null
-until [ "$BUILD_URL" != "null" ]
+until [ -n "$BUILD_URL" ]
 do
     sleep 1
     BUILD_URL=$(curl \
                     --silent \
                     --request POST \
-                    $HEADER \
+                    "${HEADER[@]}" \
                     --user "$USERNAME:$TOKEN" \
                     "$QUEUE_URL/api/json" \
                     | \
@@ -139,14 +139,13 @@ then
     echo "Build URL: $BUILD_URL"
 fi
 
-BUILD_RESULT=null
-until [ "$BUILD_RESULT" != "null" ]
+until [ -n "$BUILD_RESULT" ]
 do
-    sleep 30
+    sleep 10
     BUILD_RESULT=$(curl \
                        --silent \
                        --request POST \
-                       $HEADER \
+                       "${HEADER[@]}" \
                        --user "$USERNAME:$TOKEN" \
                        "$BUILD_URL/api/json" \
                        | jq -r '.result'
