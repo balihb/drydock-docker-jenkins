@@ -98,11 +98,6 @@ QUEUE_URL=$(curl \
                 | tr -d '[:space:]'
          )
 
-if [ $WAIT -ne 1 ]
-then
-    exit 0
-fi
-
 if [ -z "$QUEUE_URL" ]
 then
     if [ $VERBOSE -eq 1 ]
@@ -134,6 +129,11 @@ done
 if [ $VERBOSE -eq 1 ]
 then
     echo "Build URL: $BUILD_URL"
+fi
+
+if [ $WAIT -ne 1 ]
+then
+    exit 0
 fi
 
 BUILD_RESULT=""
